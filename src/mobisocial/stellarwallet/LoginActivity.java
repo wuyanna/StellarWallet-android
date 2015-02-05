@@ -1,7 +1,6 @@
 package mobisocial.stellarwallet;
 
 import mobisocial.stellar.connect.AbstractConnectTask;
-import mobisocial.stellar.connect.IConnectJSONObjectCallback;
 import mobisocial.stellar.connect.SimpleHttpHelper;
 
 import org.json.JSONException;
@@ -12,6 +11,8 @@ import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -24,8 +25,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class LoginActivity extends ActionBarActivity implements IConnectJSONObjectCallback {
-
+public class LoginActivity extends ActionBarActivity {
+	private static final String TAG = "LoginActivity";
+	private static final int MESSAGE_SHOW_PARAMS = 1;
+	private static final int MESSAGE_LOGIN = 2;
 	/**
 	 * Keep track of the login task to ensure we can cancel it if requested.
 	 */
@@ -39,6 +42,22 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 	private View mEmailLoginFormView;
 	private View mSignOutButtons;
 	private View mLoginFormView;
+
+	private Handler mTaskHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+			case MESSAGE_SHOW_PARAMS:
+				attemptLogin();
+				break;
+			case MESSAGE_LOGIN:
+				Log.i(TAG, "Logged in");
+				break;
+			default:
+				break;
+			}
+		}
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -76,12 +95,7 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 		mSignOutButtons = findViewById(R.id.plus_sign_out_buttons);
 	}
 
-	/**
-	 * Attempts to sign in or register the account specified by the login form.
-	 * If there are form errors (invalid email, missing fields, etc.), the
-	 * errors are presented and no actual login attempt is made.
-	 */
-	public void attemptLogin() {
+	private void getUserParams() {
 		if (mAuthTask != null || mParamsTask != null) {
 			return;
 		}
@@ -91,26 +105,22 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 		mPasswordView.setError(null);
 
 		// Store values at the time of the login attempt.
-		String email = mEmailView.getText().toString();
+		String username = mEmailView.getText().toString();
 		String password = mPasswordView.getText().toString();
 
 		boolean cancel = false;
 		View focusView = null;
 
 		// Check for a valid password, if the user entered one.
-		if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
+		if (!TextUtils.isEmpty(password)) {
 			mPasswordView.setError(getString(R.string.error_invalid_password));
 			focusView = mPasswordView;
 			cancel = true;
 		}
 
 		// Check for a valid email address.
-		if (TextUtils.isEmpty(email)) {
+		if (TextUtils.isEmpty(username)) {
 			mEmailView.setError(getString(R.string.error_field_required));
-			focusView = mEmailView;
-			cancel = true;
-		} else if (!isEmailValid(email)) {
-			mEmailView.setError(getString(R.string.error_invalid_email));
 			focusView = mEmailView;
 			cancel = true;
 		}
@@ -123,59 +133,28 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 			// Show a progress spinner, and kick off a background task to
 			// perform the user login attempt.
 			showProgress(true);
-			doLoginAsync(email, password);
+			mParamsTask = new ShowUserParamsTask();
+			mParamsTask.setUsername(username);
+			mParamsTask.connect();
 		}
 	}
-	
-	private void doLoginAsync(final String username, final String password) {
-		mParamsTask = new ShowUserParamsTask(new IConnectJSONObjectCallback() {
 
-			@Override
-			public void onResult(JSONObject obj) {
-				// TODO Auto-generated method stub
-				mAuthTask = new UserLoginTask(new IConnectJSONObjectCallback() {
+	/**
+	 * Attempts to sign in or register the account specified by the login form.
+	 * If there are form errors (invalid email, missing fields, etc.), the
+	 * errors are presented and no actual login attempt is made.
+	 */
+	public void attemptLogin() {
+		if (mAuthTask != null || mParamsTask == null) {
+			return;
+		}
+		String username = mEmailView.getText().toString();
+		String password = mPasswordView.getText().toString();
 
-					@Override
-					public void onResult(JSONObject obj) {
-						
-						Log.i("login", obj.toString());
-//						Intent resultIntent = new Intent();
-////						resultIntent.putExtra("token", obj.getString(""));
-//						setResult(Activity.RESULT_OK, resultIntent);
-//						finish();
-					}
-
-					@Override
-					public void onFailed(String msg) {
-						// TODO Auto-generated method stub
-						
-					}
-					
-				});
-				
-				mAuthTask.setLoginParams(username, WalletUtils.deriveWalletId(username, password));
-				mAuthTask.connect();
-			}
-
-			@Override
-			public void onFailed(String msg) {
-				// TODO Auto-generated method stub
-				
-			}
-			
-		});
-		mParamsTask.setUsername(username);
-		mParamsTask.connect();
-	}
-
-	private boolean isEmailValid(String email) {
-		// TODO: Replace this with your own logic
-		return email.contains("@");
-	}
-
-	private boolean isPasswordValid(String password) {
-		// TODO: Replace this with your own logic
-		return password.length() > 4;
+		mAuthTask = new UserLoginTask();
+		mAuthTask.setLoginParams(username,
+				WalletUtils.deriveWalletId(username, password));
+		mAuthTask.connect();
 	}
 
 	/**
@@ -219,29 +198,15 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 		}
 	}
 
-
-	@Override
-	public void onResult(JSONObject obj) {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	@Override
-	public void onFailed(String msg) {
-		// TODO Auto-generated method stub
-		
-	}
-	
 	private class UserLoginTask extends AbstractConnectTask {
-		
+
 		private String username;
 		private String walletId;
-		
-		public UserLoginTask(IConnectJSONObjectCallback callback) {
-			super(callback);
+
+		public UserLoginTask() {
 			setConnectHelper(new SimpleHttpHelper());
 		}
-		
+
 		void setLoginParams(String username, String walletId) {
 			this.username = username;
 			this.walletId = walletId;
@@ -254,19 +219,27 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 				obj.put("username", username);
 				obj.put("walletId", walletId);
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Log.e(TAG, e.getMessage());
 				return null;
 			}
 			return obj;
 		}
+
+		@Override
+		protected void onResultAvailable(JSONObject res) {
+			mTaskHandler.obtainMessage(MESSAGE_LOGIN, res).sendToTarget();
+		}
+
+		@Override
+		protected void onResultFailed(String msg) {
+			Log.e(TAG, msg);
+		}
 	}
-	
+
 	private class ShowUserParamsTask extends AbstractConnectTask {
 		private String username;
-		
-		public ShowUserParamsTask(IConnectJSONObjectCallback callback) {
-			super(callback);
+
+		public ShowUserParamsTask() {
 			setConnectHelper(new SimpleHttpHelper());
 		}
 
@@ -280,11 +253,20 @@ public class LoginActivity extends ActionBarActivity implements IConnectJSONObje
 			try {
 				obj.put("username", username);
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Log.e(TAG, e.getMessage());
 				return null;
 			}
 			return obj;
+		}
+
+		@Override
+		protected void onResultAvailable(JSONObject res) {
+			mTaskHandler.obtainMessage(MESSAGE_SHOW_PARAMS, res).sendToTarget();
+		}
+
+		@Override
+		protected void onResultFailed(String msg) {
+			Log.e(TAG, msg);
 		}
 	}
 

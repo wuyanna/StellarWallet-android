@@ -1,7 +1,6 @@
 package mobisocial.stellarwallet;
 
 import mobisocial.stellar.connect.AbstractConnectTask;
-import mobisocial.stellar.connect.IConnectJSONObjectCallback;
 import mobisocial.stellar.connect.WebsocketHelper;
 import mobisocial.stellar.model.Account;
 
@@ -22,8 +21,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
-public class MainActivity extends ActionBarActivity implements
-		IConnectJSONObjectCallback {
+public class MainActivity extends ActionBarActivity {
 	private static final String TAG = "MainActivity";
 	private static final int INTENT_LOGIN = 1;
 	private static final int INTENT_CREATE_PAYMENT = 2;
@@ -53,7 +51,7 @@ public class MainActivity extends ActionBarActivity implements
 		// user must log in first
 		// ensureLoggedIn();
 
-		mAccountTask = new AccountInfoTask(this);
+		mAccountTask = new AccountInfoTask();
 		mAccountTask.setAccountInfo("gUuM2jUW8ifGZMm2tFdnkfcxsyDqmup5XD");
 		mAccountTask.connect();
 
@@ -151,8 +149,7 @@ public class MainActivity extends ActionBarActivity implements
 		private static final String COMMAND_ACCOUNT_INFO = "account_info";
 		private String accountAddr;
 
-		public AccountInfoTask(IConnectJSONObjectCallback callback) {
-			super(callback);
+		public AccountInfoTask() {
 			WebsocketHelper socketHelper = new WebsocketHelper();
 			setConnectHelper(socketHelper);
 		}
@@ -174,24 +171,18 @@ public class MainActivity extends ActionBarActivity implements
 			return param;
 		}
 
-	}
-
-	@Override
-	public void onResult(JSONObject obj) {
-		try {
-			JSONObject result = obj.getJSONObject("result");
+		@Override
+		protected void onResultAvailable(JSONObject res) {
 			Account accountObj = new Account();
-			accountObj.resolve(result);
+			accountObj.resolve(res);
 			mTaskHandler.obtainMessage(ACCOUNT_INFO_RESULT, accountObj)
 					.sendToTarget();
-		} catch (JSONException e) {
-			Log.e(TAG, e.getMessage());
 		}
-	}
 
-	@Override
-	public void onFailed(String msg) {
-		// TODO Auto-generated method stub
+		@Override
+		protected void onResultFailed(String msg) {
+			Log.e(TAG, msg);
+		}
 
 	}
 }

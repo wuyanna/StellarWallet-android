@@ -19,10 +19,9 @@ public class SimpleHttpHelper extends AbstractConnectHelper {
 		    @Override
 		    public void onCompleted(Exception e, AsyncHttpResponse response, JSONObject result) {
 		        if (e != null) {
-		            e.printStackTrace();
+		            callback.onFailure(e.getMessage());
 		            return;
 		        }
-		        System.out.println("I got a JSONObject: " + result);
 		        callback.onResult(result);
 		    }
 		});

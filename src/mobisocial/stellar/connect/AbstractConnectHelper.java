@@ -4,10 +4,15 @@ import org.json.JSONObject;
 
 public abstract class AbstractConnectHelper {
 	
-	protected IConnectJSONObjectCallback callback;
-	protected JSONObject requestBody;
+	static public interface ConnectCallback {
+		public void onResult(JSONObject res);
+		public void onFailure(String msg);
+	}
 	
-	public void setJSONObjectCallback(IConnectJSONObjectCallback callback) {
+	protected JSONObject requestBody;
+	protected ConnectCallback callback;
+	
+	public void setConnectCallback(ConnectCallback callback) {
 		this.callback = callback;
 	}
 	
