@@ -27,7 +27,6 @@
             android:label="@string/title_activity_login"
             android:windowSoftInputMode="adjustResize|stateHidden" >
         </activity>
-
         <activity
             android:name=".PaymentActivity"
             android:label="@string/title_activity_payment" >
@@ -35,6 +34,10 @@
         <activity
             android:name=".TransactionListActivity"
             android:label="@string/title_activity_transaction_list" >
+        </activity>
+        <activity
+            android:name=".ContactListActivity"
+            android:label="@string/title_activity_contact_list" >
         </activity>
     </application>
     <!-- To access Google+ APIs: -->

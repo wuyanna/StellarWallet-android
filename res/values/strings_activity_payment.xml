@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receiver">Receiver</string>
+    <string name="amount">Amount</string>
+    <string name="submit">Submit</string>
+    <string name="contact">Contact</string>
+</resources>

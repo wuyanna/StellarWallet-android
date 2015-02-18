@@ -5,7 +5,9 @@
     <string name="action_settings">Settings</string>
     <string name="title_activity_payment">PaymentActivity</string>
     <string name="title_activity_transaction_list">TransactionListActivity</string>
-	<string name="create_payment">Create Payment</string>
-	<string name="transaction_history">Transaction History</string>
-	
+    <string name="create_payment">Create Payment</string>
+    <string name="transaction_history">Transaction History</string>
+    <string name="title_activity_contact_list">ContactListActivity</string>
+    <string name="hello_world">Hello world!</string>
+
 </resources>
