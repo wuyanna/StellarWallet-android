@@ -1,7 +1,6 @@
 package mobisocial.stellarwallet;
 
-import mobisocial.stellar.connect.AbstractConnectTask;
-import mobisocial.stellar.connect.WebsocketHelper;
+import mobisocial.stellar.connect.StellarCallback;
 import mobisocial.stellar.model.Payment;
 
 import org.json.JSONException;
@@ -10,11 +9,13 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
+import android.nfc.NdefMessage;
+import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Parcelable;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -25,12 +26,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-public class PaymentActivity extends ActionBarActivity {
+public class PaymentActivity extends ActionBarActivity implements
+		StellarCallback {
 	private static final String TAG = "PaymentActivity";
-	private static final String COMMAND_SUBMIT_PAYMENT = "submit";
-	private static final int REQUEST_CODE_CONTACT = 1;
 
-	private SubmitPaymentTask mPaymentTask;
+	private static final int REQUEST_CODE_CONTACT = 1;
 
 	private Handler mTaskHandler = new Handler() {
 		@Override
@@ -83,15 +83,56 @@ public class PaymentActivity extends ActionBarActivity {
 				try {
 					Double amountValue = Double.parseDouble(amount);
 					Payment p = new Payment(amountValue, dest);
-					mPaymentTask = new SubmitPaymentTask();
-					mPaymentTask.setPayment(p);
-					mPaymentTask.connect();
+					submitPayment(p);
 				} catch (NumberFormatException nfe) {
 					Toast.makeText(getApplicationContext(), "Invalid amount",
 							Toast.LENGTH_LONG).show();
 				}
 			}
 		});
+		
+		SharedResource.getInstance().registerNdefPushMessageActivity(this);
+	}
+	
+
+	private void submitPayment(Payment payment) {
+		JSONObject param = new JSONObject();
+		try {
+			param.put("secret",
+					SharedResource.getInstance().getMyAccount().getSecret());
+			JSONObject paymentJson = new JSONObject();
+			paymentJson.put("Account", SharedResource.getInstance().getMyAccount().getAccount());
+			paymentJson.put("Amount", payment.getAmount());
+			paymentJson.put("Destination", payment.getDestination());
+			paymentJson.put("TransactionType", "Payment");
+			param.put("tx_json", paymentJson);
+
+			SharedResource.getInstance().getApi().submitPayment(param, this);
+		} catch (JSONException e) {
+			Log.e(TAG, e.getMessage());
+		}
+	}
+	
+	@Override
+    public void onResume() {
+        super.onResume();
+        // Check to see that the Activity started due to an Android Beam
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+        	if(NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())){
+    	    	Parcelable[] rawMsgs = getIntent().getParcelableArrayExtra(
+    	                NfcAdapter.EXTRA_NDEF_MESSAGES);
+    	        // only one message sent during the beam
+    	        NdefMessage msg = (NdefMessage) rawMsgs[0];
+    	        // record 0 contains the MIME type, record 1 is the AAR, if present
+    	        EditText destTxt = (EditText) findViewById(R.id.receiver_txt);
+    	        destTxt.setText(new String(msg.getRecords()[0].getPayload()));
+    	    }
+        }
+    }
+	
+	@Override
+	protected void onNewIntent(Intent intent){
+		setIntent(intent);
 	}
 
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -122,54 +163,14 @@ public class PaymentActivity extends ActionBarActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
-	private class SubmitPaymentTask extends AbstractConnectTask {
+	@Override
+	public void onResult(JSONObject res) {
+		mTaskHandler.obtainMessage().sendToTarget();
+		Log.i(TAG, res.toString());
+	}
 
-		private Payment payment;
-
-		public SubmitPaymentTask() {
-			WebsocketHelper socketHelper = new WebsocketHelper();
-			setConnectHelper(socketHelper);
-		}
-
-		@Override
-		public JSONObject requestBody() {
-			JSONObject param = new JSONObject();
-			try {
-				param.put("command", COMMAND_SUBMIT_PAYMENT);
-				param.put("secret",
-						"sfYnf5suNQA9fvzCLFG4EZsBLsxZoHcsrazHFPhxF5QsKjWN1zU");
-				JSONObject paymentJson = new JSONObject();
-				paymentJson
-						.put("Account", "gUuM2jUW8ifGZMm2tFdnkfcxsyDqmup5XD");
-				paymentJson.put("Amount", payment.getAmount());
-				paymentJson.put("Destination", payment.getDestination());
-				paymentJson.put("TransactionType", "Payment");
-				param.put("tx_json", paymentJson);
-			} catch (JSONException e) {
-				e.printStackTrace();
-				return null;
-			}
-			return param;
-		}
-
-		@Override
-		protected void onResultAvailable(JSONObject res) {
-			mTaskHandler.obtainMessage().sendToTarget();
-			Log.i(TAG, res.toString());
-		}
-
-		@Override
-		protected void onResultFailed(String msg) {
-			Log.e(TAG, msg);
-		}
-
-		public Payment getPayment() {
-			return payment;
-		}
-
-		public void setPayment(Payment payment) {
-			this.payment = payment;
-		}
-
+	@Override
+	public void onFailure(String msg) {
+		Log.e(TAG, msg);
 	}
 }

@@ -8,6 +8,10 @@
     <string name="create_payment">Create Payment</string>
     <string name="transaction_history">Transaction History</string>
     <string name="title_activity_contact_list">ContactListActivity</string>
+    <string name="account_address">Account address: </string>
+    <string name="balance">Balance: </string>
+    <string name="title_activity_signup">SignupActivity</string>
     <string name="hello_world">Hello world!</string>
+    <string name="nfc_push">NFC Push</string>
 
 </resources>

@@ -18,6 +18,15 @@ public class Account implements Serializable {
 	
 	private String balance;
 	private String account;
+	private String secret;
+	
+	public Account() {
+		
+	}
+	
+	public Account(String accountAddress) {
+		account = accountAddress;
+	}
 	
 	public void resolve(JSONObject obj) {
 		try {
@@ -37,6 +46,30 @@ public class Account implements Serializable {
 		return account;
 	}
 
+	public void setBalance(String balance) {
+		this.balance = balance;
+	}
+
+	public String getSecret() {
+		return secret;
+	}
+
+	public void setSecret(String secret) {
+		this.secret = secret;
+	}
 	
+	// TODO Delete
+	// Dummy account generator
+	public static Account getDummyAccount(int index) {
+		if (index == 0) {
+			Account acc = new Account("gUuM2jUW8ifGZMm2tFdnkfcxsyDqmup5XD");
+			acc.setSecret("sfYnf5suNQA9fvzCLFG4EZsBLsxZoHcsrazHFPhxF5QsKjWN1zU");
+			return acc;
+		} else {
+			Account acc = new Account("gE7u95bndwGPiAPJnGdsaXXhM79Tqdojyv");
+			acc.setSecret("sfJ7TTaSdebFJNAr1Vch1VCNNGpsKU5hJNBjWaocC5RX4aMLGch");
+			return acc;
+		}
+	}
 
 }

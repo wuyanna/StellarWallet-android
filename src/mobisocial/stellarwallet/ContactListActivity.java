@@ -38,7 +38,6 @@ public class ContactListActivity extends ActionBarActivity {
 				Contact c = mContactArrayAdapter.getItem(position);
 				String address = c.getAddress();
 
-	            // Create the result Intent and include the MAC address
 	            Intent intent = new Intent();
 	            intent.putExtra(CONTACT_ADDRESS, address);
 
@@ -48,6 +47,7 @@ public class ContactListActivity extends ActionBarActivity {
 			}
 			
 		});
+		SharedResource.getInstance().registerNdefPushMessageActivity(this);
 	}
 
 	@Override

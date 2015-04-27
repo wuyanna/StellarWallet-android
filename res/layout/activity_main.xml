@@ -8,16 +8,30 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="mobisocial.stellarwallet.MainActivity" >
 
+	<TextView 
+	    android:id="@+id/account_name_lbl"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:text="@string/account_address" />
+	
     <TextView
         android:id="@+id/account_name"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_below="@id/account_name_lbl" />
     
+    <TextView 
+        android:id="@+id/balance_lbl"
+        android:text="@string/balance"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/account_name" />
+       
     <TextView
         android:id="@+id/account_balance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/account_name" />
+        android:layout_below="@id/balance_lbl" />
     
     <Button 
         android:id="@+id/create_payment_btn"
@@ -32,5 +46,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/create_payment_btn"
         android:text="@string/transaction_history" />
+    
+
 
 </RelativeLayout>

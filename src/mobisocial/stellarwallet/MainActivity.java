@@ -1,7 +1,6 @@
 package mobisocial.stellarwallet;
 
-import mobisocial.stellar.connect.AbstractConnectTask;
-import mobisocial.stellar.connect.WebsocketHelper;
+import mobisocial.stellar.connect.StellarCallback;
 import mobisocial.stellar.model.Account;
 
 import org.json.JSONException;
@@ -21,7 +20,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements StellarCallback {
 	private static final String TAG = "MainActivity";
 	private static final int INTENT_LOGIN = 1;
 	private static final int INTENT_CREATE_PAYMENT = 2;
@@ -31,8 +30,6 @@ public class MainActivity extends ActionBarActivity {
 	private TextView accountBalanceLabel;
 	private Button createPaymentBtn;
 	private Button viewTxHistoryBtn;
-
-	private AccountInfoTask mAccountTask;
 
 	private Handler mTaskHandler = new Handler() {
 		@Override
@@ -49,14 +46,11 @@ public class MainActivity extends ActionBarActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		// user must log in first
-		// ensureLoggedIn();
-
-		mAccountTask = new AccountInfoTask();
-		mAccountTask.setAccountInfo("gUuM2jUW8ifGZMm2tFdnkfcxsyDqmup5XD");
-		mAccountTask.connect();
-
+		ensureLoggedIn();
+		
 		setContentView(R.layout.activity_main);
 		initContentView();
+		
 	}
 
 	private void ensureLoggedIn() {
@@ -109,11 +103,38 @@ public class MainActivity extends ActionBarActivity {
 
 		});
 	}
+	
+	private void getAccountInfo(String addr) {
+		JSONObject requestBody = new JSONObject();
+		try {
+			requestBody.put("account", addr);
+			SharedResource.getInstance().getApi()
+					.accountInfo(requestBody, this);
+			
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == INTENT_LOGIN) {
 			if (resultCode == Activity.RESULT_OK) {
+				SharedResource.getInstance().registerNdefPushMessageActivity(this);
+				SharedResource.getInstance().getApi().initializeConnection(new StellarCallback() {
+
+					@Override
+					public void onResult(JSONObject res) {
+						getAccountInfo(SharedResource.getInstance().getMyAccount().getAccount());
+					}
+
+					@Override
+					public void onFailure(String msg) {
+					}
+					
+				});
+				
+//				getAccountInfo(SharedResource.getInstance().getMyAccount().getAccount());
 
 			} else {
 				throw new RuntimeException("Login error");
@@ -144,45 +165,17 @@ public class MainActivity extends ActionBarActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
-	private class AccountInfoTask extends AbstractConnectTask {
+	@Override
+	public void onResult(JSONObject res) {
+		Account accountObj = new Account();
+		accountObj.resolve(res);
+		mTaskHandler.obtainMessage(ACCOUNT_INFO_RESULT, accountObj)
+				.sendToTarget();
+		Log.i(TAG, "info got");
+	}
 
-		private static final String COMMAND_ACCOUNT_INFO = "account_info";
-		private String accountAddr;
-
-		public AccountInfoTask() {
-			WebsocketHelper socketHelper = new WebsocketHelper();
-			setConnectHelper(socketHelper);
-		}
-
-		public void setAccountInfo(String accountAddr) {
-			this.accountAddr = accountAddr;
-		}
-
-		@Override
-		public JSONObject requestBody() {
-			JSONObject param = new JSONObject();
-			try {
-				param.put("command", COMMAND_ACCOUNT_INFO);
-				param.put("account", accountAddr);
-			} catch (JSONException e) {
-				e.printStackTrace();
-				return null;
-			}
-			return param;
-		}
-
-		@Override
-		protected void onResultAvailable(JSONObject res) {
-			Account accountObj = new Account();
-			accountObj.resolve(res);
-			mTaskHandler.obtainMessage(ACCOUNT_INFO_RESULT, accountObj)
-					.sendToTarget();
-		}
-
-		@Override
-		protected void onResultFailed(String msg) {
-			Log.e(TAG, msg);
-		}
-
+	@Override
+	public void onFailure(String msg) {
+		Log.e(TAG, msg);
 	}
 }
